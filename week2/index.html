@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Orbits Study</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+</head>
+<body>
+	<script src="js/three.min.js"></script>
+	<script src="js/Detector.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="js/GLTFLoader.js"></script>
+	<script src="js/THREEx.KeyboardState.js"></script>
+	<script src="js/THREEx.FullScreen.js"></script>
+	<script src="js/THREEx.WindowResize.js"></script>
+
+	<div id="ThreeJS" style="position: absolute; left:0px; top:100px"></div>
+    <div style="position:absolute;top:90px;left:28px;opacity:0.5;font-size:80px;color:yellow" onclick="changeCamera()">-</div>
+    <div style="position:absolute;top:160px;left:20px;font-size:80px;color:red" onclick="comeCloser()">+</div>
+
+	<script>
+	//variables to be controlled from external to main
+	var viewDistance = 800;
+	var camera = "";
+	
+	// MAIN
+	function main() {
+		// standard global variables
+		var container, scene, renderer, controls, stats;
+		var keyboard = new THREEx.KeyboardState();
+		var clock = new THREE.Clock();
+
+		// custom global variables
+		var world;
+		var sun = "";
+		
+		//asteroids data structure
+		var asteroid = [
+		    // x-rot, scale, model, color,    distance
+			[  1.57,  1.0,   "",    0xffff00, 250],
+			[  3.6,   0.7,   "",    0x000080, 300]
+		];
+		
+		num_asteroids = asteroid.length;
+
+		// FUNCTIONS 
+		function distance(a1, b1, a2, b2) {
+			return Math.sqrt((a1 - a2)*(a1 - a2) + (b1 - b2)*(b1 - b2));
+		}	
+	
+		function init()
+		{
+			// SCENE
+			scene = new THREE.Scene();
+			// CAMERA
+			var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+			var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+			camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+			scene.add(camera);
+			camera.position.set(0,150,viewDistance);
+			camera.lookAt(0.0,0.0,0.0);
+			//camera.rotation.set(0.0,0,0.0);
+
+			// RENDERER
+			if ( Detector.webgl ) {
+				renderer = new THREE.WebGLRenderer( {antialias:true} );
+			} else {
+				renderer = new THREE.CanvasRenderer();
+			}
+			renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+			container = document.getElementById( 'ThreeJS' );
+			container.appendChild( renderer.domElement );
+			// EVENTS
+			THREEx.WindowResize(renderer, camera);
+			THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+			// CONTROLS
+			controls = new THREE.OrbitControls( camera, renderer.domElement );
+			// LIGHT
+			var light = new THREE.PointLight(0xffffff);
+			light.position.set(0,250,0);
+			scene.add(light);
+
+			scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+
+			// LIGHT
+			var light = new THREE.PointLight(0xffff00);
+			light.intensity = 10.0;
+			light.distance = 500;
+			light.position.set(0,250,0);
+			
+			//example of building visual object from primitives (the planet)
+			var geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
+			var material = new THREE.MeshBasicMaterial( { color: 0x00ffff } ); 
+			var sphere = new THREE.Mesh( geometry, material ); scene.add( sphere );
+			sphere.scale.set (10,10,10);
+			
+			for(i=0; i<num_asteroids; i++) {
+				geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
+				material = new THREE.MeshBasicMaterial( { color: asteroid[i][3] } ); 
+				asteroid[i][2] = new THREE.Mesh( geometry, material ); 
+				scene.add( asteroid[i][2] );
+				asteroid[i][2].scale.set (asteroid[i][1],asteroid[i][1],asteroid[i][1]);				
+			}
+
+			/*
+			//example of loading a visual model via a loader (the asteroids)
+			asteroid_model = this;
+			var loader = new THREE.GLTFLoader();
+			loader.load(
+			  "sun.glb",
+			  function ( gltf ) {
+				asteroid_model = gltf.scene; 
+				asteroid_model.rotation.set ( 0, 0, 0 );
+				asteroid_model.scale.set (asteroidscale, asteroidscale, asteroidscale);
+				asteroid_model.position.set ( 0, 250, 0);
+				asteroidOrbit.add(asteroid_model);
+			  },
+			);
+			*/
+		}
+
+		function animate() {
+			requestAnimationFrame( animate );
+			render();		
+			update();
+		}
+
+		var time = 0;
+		var sun_rotate_time = 0;
+
+		function update() {
+			//only once all asteroid models are loaded fully
+			if( asteroid.length == num_asteroids) {
+		
+				// move forwards/backwards/left/right
+				if ( keyboard.pressed("W") ) {}
+				if ( keyboard.pressed("A") ) {}
+				if ( keyboard.pressed("Z") ) {}
+	
+				if(time==0) {
+					//model initialization
+				}
+				
+				//for a good primer on 3D rotation, see:
+				//https://www.khanacademy.org/computing/computer-programming/programming-games-visualizations/programming-3d-shapes/a/rotating-3d-shapes
+				for(i=0; i<num_asteroids; i++) {
+					asteroid[i][2].position.x = asteroid[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%1000)/1000) * ((2*Math.PI-asteroid[i][0])/(2*Math.PI));;
+					asteroid[i][2].position.y = asteroid[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%1000)/1000) * (asteroid[i][0]/(2*Math.PI));
+					asteroid[i][2].position.z = asteroid[i][4] * Math.cos(2*Math.PI * (sun_rotate_time%1000)/1000);
+				}
+	
+				time++;
+				sun_rotate_time++;
+			}
+		}
+
+		function render() 
+		{
+			renderer.render( scene, camera );
+		}
+
+		init();
+		animate();
+	
+		function handleKeyDown ( keyEvent ) {
+		  switch ( keyEvent.keyCode ) {
+		    /*
+			case 65: case 97:  // "a" key or left arrow key
+				asteroidscale = 1.2*asteroidscale;
+				asteroid_model.scale.set (asteroidscale, asteroidscale, asteroidscale);
+				break;
+			case 66: case 98:  // "b" key or left arrow key
+				asteroidscale = asteroidscale/1.2;
+				asteroid_model.scale.set (asteroidscale, asteroidscale, asteroidscale);
+				break;
+			case 67: case 99:  // "c" key or left arrow key
+				ape[0].position.x += 2.0;
+				break;			
+			case 68: case 100:  // "d" key or left arrow key
+				ape[0].position.x -= 2.0;
+				break;
+			*/
+		  }
+		}
+
+		function handleKeyUp(keyEvent) {
+		   switch( keyEvent.keyCode ) {
+			case 65: case 37:  // "a" key or left arrow key
+			break;
+			}
+		}
+
+		document.onkeydown = handleKeyDown;
+		document.onkeyup = handleKeyUp;	
+	}
+
+	function changeCamera() {
+		viewDistance += 10;
+		camera.position.set(0, 150, viewDistance);
+	}
+
+	function comeCloser() {
+		viewDistance -= 10;
+		camera.position.set(0, 150, viewDistance);
+	}
+
+	main();
+
+	</script>
+</body>
+</html>
