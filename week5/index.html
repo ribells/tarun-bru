@@ -66,8 +66,9 @@
 		];
 		
 		for (n=0; n<100; n++){
-			asteroids.push([Math.random()*2, 0.2, "", 0xff8000, 300+Math.random()*500, 2])
+			asteroids.push([Math.random()*2, 0.2, "", 0xff8000, 300+Math.random()*500, Math.floor(Math.random()*5+1)*2 ])
 		}
+		
 		num_asteroids = asteroids.length;
 
 		// FUNCTIONS 
@@ -86,9 +87,8 @@
 			var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
 			camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
 			scene.add(camera);
-			camera.position.set(0, 150,viewDistance);
+			camera.position.set(0, 150, viewDistance);
 			camera.lookAt(0,0,0,0);
-
 
 			// RENDERER
 			if ( Detector.webgl ) {
@@ -152,7 +152,7 @@
 			
 			//asteroid creation
 			for(i=0; i<num_asteroids; i++) {
-				geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
+				geometry = new THREE.SphereGeometry( 5, 12, 15 ); 
 				material = new THREE.MeshStandardMaterial( { color: asteroids[i][3] } ); 
 				asteroids[i][2] = new THREE.Mesh( geometry, material ); 
 				scene.add( asteroids[i][2] );
@@ -170,13 +170,14 @@
 		var sun_rotate_time = 0;
 
 		function orbit() {
-					for (i=0; i<num_asteroids; i++) {
-						asteroids[i][2].position.x = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
-						asteroids[i][2].position.y = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * (asteroids[i][0]/(2*Math.PI));
-						asteroids[i][2].position.z = asteroids[i][4] * Math.cos(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000);
-					}}
-					
-				setInterval(orbit, 10);
+			for (i=0; i<num_asteroids; i++) {
+				asteroids[i][2].position.x = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
+				asteroids[i][2].position.y = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * (asteroids[i][0]/(2*Math.PI));
+				asteroids[i][2].position.z = asteroids[i][4] * Math.cos(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000);
+			}
+		}
+		
+    	setInterval(orbit, 10);
 
 		function update() {
 			//only once all asteroid models are loaded fully
