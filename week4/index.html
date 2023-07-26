@@ -57,12 +57,12 @@
 		//asteroids data structure
 		var asteroids = [
 		    // x-rot, scale, model, color,    distance, speed (only even numbers)
-			[  1.57,  1.5,   "",    0x00ffff, 250,      2],
-			[  3.6,   0.7,   "",    0x000080, 300,      4],
-			[  1,     1.0,   "",    0xff0000, 600,      6],
-			[  8.6,   1.2,   "",    0x2D383A, 500,      2],
-			[  1.57,  1.0,   "",    0x6919B5, 400,      4],
-			[  -8,    2.0,   "",    0x074c0f, 600,      4],
+			[  1.57,  1.5,   "",    0x00ffff, 250,      4000],
+			[  3.6,   0.7,   "",    0x000080, 300,      2000],
+			[  1,     1.0,   "",    0xff0000, 600,      560],
+			[  8.6,   1.2,   "",    0x2D383A, 500,      720],
+			[  1.57,  1.0,   "",    0x6919B5, 400,      140],
+			[  -8,    2.0,   "",    0x074c0f, 600,      20000],
 		];
 	
 		num_asteroids = asteroids.length;
@@ -152,33 +152,32 @@
 
 		var time = 0;
 		var sun_rotate_time = 0;
+		
+		function orbit() {
+		    //only once all asteroid models are loaded fully
+			if(asteroids.length == num_asteroids) {
+			    for (i=0; i<num_asteroids; i++) {
+					asteroids[i][2].position.x = asteroids[i][4] * Math.sin(Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
+					asteroids[i][2].position.y = asteroids[i][4] * Math.sin(Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * (asteroids[i][0]/(2*Math.PI));
+					asteroids[i][2].position.z = asteroids[i][4] * Math.cos(Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]);
+				}
+			}
+		}		
+		
+		setInterval(orbit, 10);
 
 		function update() {
-			//only once all asteroid models are loaded fully
-			if( asteroids.length == num_asteroids) {
-		
-				// move forwards/backwards/left/right
-				if ( keyboard.pressed("W") ) {}
-				if ( keyboard.pressed("A") ) {}
-				if ( keyboard.pressed("Z") ) {}
-	
-				if(time==0) {
-					//model initialization
-				}
+			// move forwards/backwards/left/right
+			if ( keyboard.pressed("W") ) {}
+			if ( keyboard.pressed("A") ) {}
+			if ( keyboard.pressed("Z") ) {}
 
-				function orbit() {
-					for (i=0; i<num_asteroids; i++) {
-						asteroids[i][2].position.x = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
-						asteroids[i][2].position.y = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * (asteroids[i][0]/(2*Math.PI));
-						asteroids[i][2].position.z = asteroids[i][4] * Math.cos(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000);
-					}}
-					
-				setInterval(orbit, 10);
-	
-				
-				time++;
-				sun_rotate_time++;
+			if(time==0) {
+				//model initialization
 			}
+
+			time++;
+			sun_rotate_time++;
 		}
 
 		function render() 
