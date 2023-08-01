@@ -37,6 +37,7 @@
 	<div id="ThreeJS" style="position: absolute; left:px; top:0px"></div>
 
 	<script>
+
 	//variables to be controlled from external to main
 	var viewDistance = 800;
 	var camera = "";
@@ -53,30 +54,9 @@
 		var world;
 		var sun = "";
 		var container = document.getElementById('ThreeJS');
+		var time = 0;
+		var sun_rotate_time = 0;
 
-		//asteroids data structure
-		var asteroids = [
-		    // x-rot, scale, model, color,    distance, speed (only even numbers)
-			[  1.57,  1.5,   "",    0x00ffff, 250,      2],
-			[  3.6,   0.7,   "",    0x000080, 300,      4],
-			[  1,     1.0,   "",    0xff0000, 600,      6],
-			[  8.6,   1.2,   "",    0x2D383A, 500,      2],
-			[  1.57,  1.0,   "",    0x6919B5, 400,      4],
-			[  -8,    2.0,   "",    0x074c0f, 600,      4],
-		];
-		
-		for (n=0; n<100; n++){
-			asteroids.push([Math.random()*2, 0.2, "", 0xff8000, 300+Math.random()*500, Math.floor(Math.random()*5+1)*2 ])
-		}
-		
-		num_asteroids = asteroids.length;
-
-		// FUNCTIONS 
-		function distance(x1,x2, y1, y2, z1, z2 ) {
-			return Math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2));
-
-		}	
-		
 		function ThreeJS()
 		{
 			// SCENE
@@ -87,7 +67,7 @@
 			var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
 			camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
 			scene.add(camera);
-			camera.position.set(0, 150, viewDistance);
+			camera.position.set(1400, -50, viewDistance);
 			camera.lookAt(0,0,0,0);
 
 			// RENDERER
@@ -113,46 +93,34 @@
 			
 			// CONTROLS
 		
-			controls = new THREE.OrbitControls(camera, renderer.domElement );
-
-			// LIGHT
-			/*
-			var light = new THREE.PointLight(0xffffff);
-			light.position.set(0,250,0);
-			scene.add(light);
-			*/
+			controls = new THREE.TrackballControls( camera );
 			
-			scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+			controls.rotateSpeed = 1.0;
+			controls.zoomSpeed = 1.2;
+			controls.panSpeed = 0.8;
+			controls.noZoom = false;
+			controls.staticMoving = true;
+			controls.dynamicDampingFactor = 0.3;
 
-			// LIGHT
-			const color = 0xFFFFFF;
-			const intensity = 0.5;
-			const light1 = new THREE.AmbientLight(color, intensity);
-			scene.add(light1);
-			/*
-			var light = new THREE.PointLight(0xffff00);
-			light.intensity = 10.0;
-			light.distance = 500;
-			light.position.set(0,250,0);
-			*/
-			
-			//example of building visual object from primitives (the planet)
-	
-			//sun()
+			function distance(x1,x2, y1, y2, z1, z2 ) {
+			return Math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2));
+
+		}	
+
+		//sun()
 			var geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
 			var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } ); 
 			var sphere = new THREE.Mesh( geometry, material ); 
 			sphere.scale.set (10,10,10);
 			scene.add(sphere);
-			var light = new THREE.PointLight(0xffff00, 1, 1000);
+			const color = 0xFFFFFF;
+			const light = new THREE.PointLight(color, 0.9, 2000);
 			light.position.set(0,0,0);
 			scene.add(light);
-			
-			
-			
-			//asteroid creation
-			for(i=0; i<num_asteroids; i++) {
-				geometry = new THREE.SphereGeometry( 5, 12, 15 ); 
+
+		//asteroid creation
+		for(i=0; i<num_asteroids; i++) {
+				geometry = new THREE.SphereGeometry( 5, 6, 10 ); 
 				material = new THREE.MeshStandardMaterial( { color: asteroids[i][3] } ); 
 				asteroids[i][2] = new THREE.Mesh( geometry, material ); 
 				scene.add( asteroids[i][2] );
@@ -160,24 +128,39 @@
 			}		
 		}
 
+		//asteroid orbit
+		function orbit() {
+			for (i=0; i<num_asteroids; i++) {
+				asteroids[i][2].position.x = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
+				asteroids[i][2].position.y = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * (asteroids[i][0]/(2*Math.PI));
+				asteroids[i][2].position.z = asteroids[i][4] * Math.cos(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]);
+			}			
+		}	
+
+		//asteroids data structure
+		var asteroids = [
+		    /*x-rot, scale, model, color,    distance, speed (only even numbers)
+			[  -1.57,  20,   "",    0x00ffff, 1000,      2000],
+			[  3.6,   2.7,   "",    0x000080, 300,      4],
+			[  1,     1.0,   "",    0xff0000, 600,      6],
+			[  8.6,   1.9,   "",    0x2D383A, 500,      2],
+			[  1.57,  1.8,   "",    0x6919B5, 400,      4],
+			[  -8,    2.0,   "",    0x074c0f, 600,      4],
+			*/
+		];
+		
+		for (n=0; n<500; n++){
+			asteroids.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 3) + 0.5, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*5000)+250, Math.floor(Math.random()*1300)+20])
+		}
+		num_asteroids = asteroids.length;
+
 		function animate() {
 			requestAnimationFrame( animate );
 			render();		
 			update();
 		}
-
-		var time = 0;
-		var sun_rotate_time = 0;
-
-		function orbit() {
-			for (i=0; i<num_asteroids; i++) {
-				asteroids[i][2].position.x = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
-				asteroids[i][2].position.y = asteroids[i][4] * Math.sin(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000) * (asteroids[i][0]/(2*Math.PI));
-				asteroids[i][2].position.z = asteroids[i][4] * Math.cos(asteroids[i][5]*Math.PI * (sun_rotate_time%2000)/2000);
-			}
-		}
-		
-    	setInterval(orbit, 10);
+					
+		setInterval(orbit, 10);
 
 		function update() {
 			//only once all asteroid models are loaded fully
@@ -201,47 +184,12 @@
 		function render() 
 		{
 			renderer.render( scene, camera );
+			controls.update();
 		}
 
 		ThreeJS();
 		animate();
-	
-		function handleKeyDown ( keyEvent ) {
-		  switch ( keyEvent.keyCode ) {
-		    /*
-			case 65: case 97:  // "a" key or left arrow key
-				asteroidscale = 1.2*asteroidscale;
-				asteroid_model.scale.set (asteroidscale, asteroidscale, asteroidscale);
-				break;
-			case 66: case 98:  // "b" key or left arrow key
-				asteroidscale = asteroidscale/1.2;
-				asteroid_model.scale.set (asteroidscale, asteroidscale, asteroidscale);
-				break;
-			case 67: case 99:  // "c" key or left arrow key
-				ape[0].position.x += 2.0;
-				break;			
-			case 68: case 100:  // "d" key or left arrow key
-				ape[0].position.x -= 2.0;
-				break;
-			*/
-		  }
-		}
-
-		function handleKeyUp(keyEvent) {
-		   switch( keyEvent.keyCode ) {
-			case 65: case 37:  // "a" key or left arrow key
-			break;
-			}
-		}
-
-		document.onkeydown = handleKeyDown;
-		document.onkeyup = handleKeyUp;	
 	}
-
-	addEventListener("wheel", (event) => {
-		viewDistance += event.deltaY/4;
-		camera.position.set(0, 150, viewDistance);
-	});
 
 	main();
 
