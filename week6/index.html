@@ -17,6 +17,7 @@
 	<script src="js/starfield.js"></script>
 	<script src="js/TrackballControls.js"></script>
 	<script src="js/jquery-1.9.1.js"></script>
+	<script src="js/Vector3.js"></script>
 	
    	<script>
 		//starfield
@@ -28,7 +29,7 @@
    		function randomise() {
    			starfield.stop();
   			starfield.stars = Math.random()*1000 + 50;
-   			starfield.minVelocity = Math.random()*30+5;
+			starfield.minVelocity = Math.random()*30+5;
    			starfield.maxVelocity = Math.random()*50 + starfield.minVelocity;			
    			starfield.start();
 		}
@@ -37,11 +38,11 @@
 	<div id="ThreeJS" style="position: absolute; left:px; top:0px"></div>
 
 	<script>
-
 	//variables to be controlled from external to main
 	var viewDistance = 800;
 	var camera = "";
-    var sun = "";
+	var sun = "";
+	var goal = "";
 	
 	// MAIN
 	function main() {
@@ -54,141 +55,153 @@
 		var world;
 		var container = document.getElementById('ThreeJS');
 		var time = 0;
+		var newPosition = new THREE.Vector3();
+		var matrix = new THREE.Matrix4();
 		var sun_rotate_time = 0;
+		var temp = new THREE.Vector3;
+		var stop = 1;
+		var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+		var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+		var asteroids = [/* x-rot, scale, model, color,    distance, speed*/];
+		var planets = [/* x-rot, scale, model, color,    distance, speed, x position relative to the sun, y position relative to the sun, z position relative to the sun*/];
 
 		function ThreeJS()
 		{
-			// SCENE
-			scene = new THREE.Scene();
 
 			// CAMERA
-			var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
-			var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
-			camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+			camera = new THREE.PerspectiveCamera( VIEW_ANGLE, window.innerWidth / window.innerHeight, NEAR, FAR);
+			camera.position.set(0, 10, 200);
 
-			// RENDERER
-			if ( Detector.webgl ) {
-				renderer = new THREE.WebGLRenderer({ antialias: false,alpha:true });
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.setClearColor(0x000000, 0);
-			} else {
-			renderer = new THREE.CanvasRenderer();
+			// SCENE
+			scene = new THREE.Scene();
+			camera.lookAt( scene.position );
+
+			function distance(x1, x2, y1, y2, z1, z2 ) {
+				return Math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2));
 			}
-			renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 
-			window.addEventListener('resize', () => {
-    			renderer.setSize(window.innerWidth, window.innerHeight);
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-			})
-			container.appendChild( renderer.domElement );
-
-			// EVENTS
-			THREEx.WindowResize(renderer, camera);
-			THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) })
-			
-			// CONTROLS
-		
-			controls = new THREE.TrackballControls( camera );
-			
-			controls.rotateSpeed = 1.0;
-			controls.zoomSpeed = 1.2;
-			controls.panSpeed = 0.8;
-			controls.noZoom = false;
-			controls.staticMoving = true;
-			controls.dynamicDampingFactor = 0.3;
-
-		function distance(x1,x2, y1, y2, z1, z2 ) {
-		    return Math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2));
-		}	
-
-		function collision(x1, x2, y1, y2, z1, z2, r1, r2 ) {
-			if(Math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2)) < (r1+r2)) {
-				return true;
-            }
-
-		    return false;
-		}
-
-		//sun()
+			//sun()
 			var geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
 			var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } ); 
 			sun = new THREE.Mesh( geometry, material ); 
-			sun.scale.set (10,10,10);
-            sun.position.set(0,0,0);
+			sun.scale.set (1, 1, 1);
+			goal = new THREE.Object3D;
+			sun.add(goal);
 			scene.add(sun);
-
-			sun.add(camera);
-			camera.position.set(1400, -50, viewDistance);
-			camera.lookAt(0,0,0,0);
-
+			goal.position.set(0, 10, 265);
 			const color = 0xFFFFFF;
-			const light = new THREE.PointLight(color, 0.9, 2000);
-			light.position.set(0,0,0);
-			scene.add(light);
+			const light = new THREE.PointLight(color, 1, 2000);
+			sun.add(light);
+		}
+		ThreeJS();
 
-		//asteroid creation
-		for(i=0; i<num_asteroids; i++) {
-				geometry = new THREE.SphereGeometry( 5, 6, 10 ); 
+		function Creations() 
+		{
+
+			//asteroid generation
+			for (n=0; n<100; n++){
+				asteroids.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 1) + 0.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, Math.floor(Math.random()*500)+200])
+				}
+
+			//asteroid assignment
+			num_asteroids = asteroids.length
+			for(i=0; i<num_asteroids; i++) {
+				geometry = new THREE.SphereGeometry(8); 
 				material = new THREE.MeshStandardMaterial( { color: asteroids[i][3] } ); 
 				asteroids[i][2] = new THREE.Mesh( geometry, material ); 
 				sun.add( asteroids[i][2] );
-				asteroids[i][2].scale.set (asteroids[i][1],asteroids[i][1],asteroids[i][1]);	
-			}		
-		}
+				asteroids[i][2].scale.set (asteroids[i][1],asteroids[i][1],asteroids[i][1]);
+			}	
 
-		//asteroid orbit
-		function orbit() {
-			for (i=0; i<num_asteroids; i++) {
-				asteroids[i][2].position.x = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));;
-				asteroids[i][2].position.y = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * (asteroids[i][0]/(2*Math.PI));
-				asteroids[i][2].position.z = asteroids[i][4] * Math.cos(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]);
+			//asteroid orbit
+			function orbit() {
+				for (i=0; i<num_asteroids; i++) {
+					let boundingSpheres = new THREE.Sphere(asteroids[i][2].position, asteroids[i][1]);
+					asteroids[i][2].position.x = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));
+					boundingSpheres.x = asteroids[i][2].position.x;
+					asteroids[i][2].position.y = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * (asteroids[i][0]/(2*Math.PI));
+					boundingSpheres.y = asteroids[i][2].position.y;
+					asteroids[i][2].position.z = asteroids[i][4] * Math.cos(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]);
+					boundingSpheres.z = asteroids[i][2].position.z;
+				}
+			}	
+			setInterval(orbit, 10);	
+
+			//collisions
+			/*function collision(boundingSpheres) {
+				const distance = Math.sqrt((boundingSpheres.x - boundingSpheres.x) * (boundingSpheres.x - boundingSpheres.x) + (boundingSpheres.y - boundingSpheres.y) * (boundingSpheres.y - boundingSpheres.y) + (boundingSpheres.z - boundingSpheres.z) * (boundingSpheres.z - boundingSpheres.z),);
+				if (distance < asteroids[i][1]+asteroids[i][1]) {
+					return true;
+				}
+				return false;
 			}
 
-			//if(sun_rotate_time > 200) {
-				sun.position.z = sun_rotate_time;
-			//}
-		}	
+			if (collision() === true) {
+				camera.position.set(0, 10, 20000);
+			}*/
 
-		//asteroids data structure
-		var asteroids = [
-		    /*x-rot, scale, model, color,    distance, speed (only even numbers)
-			[  -1.57,  20,   "",    0x00ffff, 1000,      2000],
-			[  3.6,   2.7,   "",    0x000080, 300,      4],
-			[  1,     1.0,   "",    0xff0000, 600,      6],
-			[  8.6,   1.9,   "",    0x2D383A, 500,      2],
-			[  1.57,  1.8,   "",    0x6919B5, 400,      4],
-			[  -8,    2.0,   "",    0x074c0f, 600,      4],
-			*/
-		];
+			//planet generation
+			function Pgen() {
+				for (i=0; i<10; i++){
+				planets.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 2) + 0.5, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), 500, Math.floor(Math.random()*1300)+20, Math.floor(Math.random()*1000)-500, Math.floor(Math.random()*1000)-500, Math.floor(Math.random()*1000)-500])
+				}
+			}
+			Pgen();
+
+			//planet assignment
+			num_planets = planets.length;
+			for(i=0; i<num_planets; i++) {
+				geometry = new THREE.SphereGeometry( 8, 6, 10 ); 
+				material = new THREE.MeshBasicMaterial( { color: planets[i][3] } ); 
+				planets[i][2] = new THREE.Mesh( geometry, material ); 
+				scene.add( planets[i][2] );
+				planets[i][2].scale.set (planets[i][1],planets[i][1],planets[i][1]);
+				planets[i][2].position.x = sun.position.x - planets[i][6];
+				planets[i][2].position.y = sun.position.y - planets[i][7];
+				planets[i][2].position.z = planets[i][8];
+			}
+		}
+		Creations();
+
+		// CONTROLS
+		controls = new THREE.TrackballControls( camera );
+		controls.rotateSpeed = 1;
+		controls.noPan = false;
 		
-		for (n=0; n<500; n++){
-			asteroids.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 3) + 0.5, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*1000)+50, Math.floor(Math.random()*1300)+20])
+		// RENDERER
+		if ( Detector.webgl ) {
+			renderer = new THREE.WebGLRenderer({ antialias: true,alpha:true });
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor(0x000000, 0);
+		} else {
+			renderer = new THREE.CanvasRenderer();
 		}
-		num_asteroids = asteroids.length;
+		renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 
-		function animate() {
-			requestAnimationFrame( animate );
-			render();		
-			update();
-		}
-					
-		setInterval(orbit, 10);
+		window.addEventListener('resize', () => {
+    		renderer.setSize(window.innerWidth, window.innerHeight);
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+		})
+		container.appendChild( renderer.domElement );
+
+
+		// EVENTS
+		THREEx.WindowResize(renderer, camera);
+		THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) })
 
 		function update() {
-			//only once all asteroid models are loaded fully
-			if( asteroids.length == num_asteroids) {
+		//only once all asteroid models are loaded fully
+			if( asteroids.length == num_asteroids ) {
 		
 				// move forwards/backwards/left/right
 				if ( keyboard.pressed("W") ) {}
 				if ( keyboard.pressed("A") ) {}
 				if ( keyboard.pressed("Z") ) {}
-	
 				if(time==0) {
 					//model initialization
 				}
-
-				time++;
+				time++
 				sun_rotate_time++;
 			}
 		}
@@ -198,11 +211,21 @@
 			renderer.render( scene, camera );
 			controls.update();
 		}
-
-		ThreeJS();
+		
+		function animate() {
+			requestAnimationFrame( animate );
+			update();		
+			//sun movement
+			if ( keyboard.pressed("f") ) {
+					sun.translateZ(65);
+					temp.setFromMatrixPosition(goal.matrixWorld);
+					camera.position.lerp(temp, 1);
+					camera.lookAt( sun.position );
+			}
+			render();
+		}
 		animate();
 	}
-
 	main();
 
 	</script>
