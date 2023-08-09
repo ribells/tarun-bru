@@ -98,18 +98,22 @@
 			{
 				//asteroid generation
 				for (n=0; n<100; n++){
-				                   //x-rot, scale, model, color, distance, speed
-					asteroids.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 1) + 0.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, Math.floor(Math.random()*500)+200])
+				                   //x-rot, scale, model, color, distance, velocity, vector
+					asteroids.push([0, Math.floor(Math.random() * 1) + 0.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, 0, [0,0,0]]);
 				}
 
 				//asteroid assignment
-				num_asteroids = asteroids.length
+				num_asteroids = asteroids.length;
 				for(i=0; i<num_asteroids; i++) {
 					geometry = new THREE.SphereGeometry(5, 6, 10); 
-					material = new THREE.MeshStandardMaterial( { color: asteroids[i][3] } ); 
+					material = new THREE.MeshBasicMaterial( { color: asteroids[i][3] } ); 
 					asteroids[i][2] = new THREE.Mesh( geometry, material ); 
-					sun.add( asteroids[i][2] );
+					scene.add( asteroids[i][2] );
 					asteroids[i][2].scale.set (asteroids[i][1],asteroids[i][1],asteroids[i][1]);
+					//set starting position, vector and velocity
+					asteroids[i][2].position.set (Math.random(300) - 150, Math.random(300) - 150, -1000);
+					asteroids[i][6] = [Math.random(3) - 1.5, Math.random(3) - 1.5, Math.random(3) - 1.5];
+					asteroids[i][5] = Math.random(5) - 2.5;
 				}	
 
 				//collisions
@@ -128,10 +132,12 @@
 
 				//asteroid orbit
 				function orbit() {
+				    
 					for (i=0; i<num_asteroids; i++) {
-						asteroids[i][2].position.x = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * ((2*Math.PI-asteroids[i][0])/(2*Math.PI));
-						asteroids[i][2].position.y = asteroids[i][4] * Math.sin(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]) * (asteroids[i][0]/(2*Math.PI));
-						asteroids[i][2].position.z = asteroids[i][4] * Math.cos(2*Math.PI * (sun_rotate_time%asteroids[i][5])/asteroids[i][5]);
+					    //update the vector (using sin and cosine) to keep orbit stable
+						asteroids[i][2].position.x += asteroids[i][6][0] * asteroids[i][5];
+						asteroids[i][2].position.y += asteroids[i][6][1] * asteroids[i][5];
+						asteroids[i][2].position.z += asteroids[i][6][2] * asteroids[i][5];
 					}
 					for (i=0; i<num_asteroids; i++) {
 						for (j=0; j<i; j++) {
@@ -140,6 +146,7 @@
 							}
 						}
 					}
+					
 				}	
 				setInterval(orbit, 10);	
 
