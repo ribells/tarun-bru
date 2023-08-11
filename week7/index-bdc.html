@@ -111,9 +111,14 @@
 					scene.add( asteroids[i][2] );
 					asteroids[i][2].scale.set (asteroids[i][1],asteroids[i][1],asteroids[i][1]);
 					//set starting position, vector and velocity
-					asteroids[i][2].position.set (Math.random(300) - 150, Math.random(300) - 150, -1000);
-					asteroids[i][6] = [Math.random(3) - 1.5, Math.random(3) - 1.5, Math.random(3) - 1.5];
-					asteroids[i][5] = Math.random(5) - 2.5;
+					//alert(sun.position.x + "," + sun.position.y + "," + sun.position.z);
+					var seed = 2*Math.random()-1;
+					asteroids[i][2].position.set (sun.position.x + (Math.random(100) + 100) * Math.sin(seed), 
+					                              sun.position.y + (Math.random(100) + 100) * Math.cos(seed), 
+					                              sun.position.z);
+					asteroids[i][6] = [Math.random() - .5, Math.random() - .5, Math.random() - .5];
+					//asteroids[i][6] = [0,0,0];
+					asteroids[i][5] = Math.random(.5) - .25;
 				}	
 
 				//collisions
