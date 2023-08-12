@@ -43,6 +43,11 @@
 		var camera = "";
 		var sun = "";
 		var goal = "";
+		const g = 39.5;
+        const dt = 0.008; // 0.008 years is equal to 2.92 days
+        const softeningConstant = 0.15;
+        const sun_mass = 100;
+        const a_mass = 1.65956463e-7;
 	
 		// MAIN
 		function main() {
@@ -62,14 +67,14 @@
 			var stop = 1;
 			var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
 			var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
-			var asteroids = [/* x-rot, scale, model, color,    distance, speed*/];
-			var planets = [/* x-rot, scale, model, color,    distance, speed, x position relative to the sun, y position relative to the sun, z position relative to the sun*/];
+			var asteroids = [/* x-rot, scale, model, color, distance, velocity, vector */];
+			var planets = [/* x-rot, scale, model, color, distance, speed, x position relative to the sun, y position relative to the sun, z position relative to the sun*/];
 
 			function ThreeJS()
 			{
 				// CAMERA
 				camera = new THREE.PerspectiveCamera( VIEW_ANGLE, window.innerWidth / window.innerHeight, NEAR, FAR);
-				camera.position.set(0, 10, 200);
+				camera.position.set(0, 0, 500);
 
 				// SCENE
 				scene = new THREE.Scene();
@@ -98,8 +103,7 @@
 			{
 				//asteroid generation
 				for (n=0; n<100; n++){
-				                   //x-rot, scale, model, color, distance, velocity, vector
-					asteroids.push([0, Math.floor(Math.random() * 1) + 0.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, 0, [0,0,0]]);
+					asteroids.push([0, Math.floor(Math.random() * 1) + 0.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, 0, [0,0,0], [0,0,0]]);
 				}
 
 				//asteroid assignment
@@ -110,16 +114,50 @@
 					asteroids[i][2] = new THREE.Mesh( geometry, material ); 
 					scene.add( asteroids[i][2] );
 					asteroids[i][2].scale.set (asteroids[i][1],asteroids[i][1],asteroids[i][1]);
-					//set starting position, vector and velocity
-					//alert(sun.position.x + "," + sun.position.y + "," + sun.position.z);
-					var seed = 2*Math.random()-1;
-					asteroids[i][2].position.set (sun.position.x + (Math.random(100) + 100) * Math.sin(seed), 
-					                              sun.position.y + (Math.random(100) + 100) * Math.cos(seed), 
-					                              sun.position.z);
-					asteroids[i][6] = [Math.random() - .5, Math.random() - .5, Math.random() - .5];
-					//asteroids[i][6] = [0,0,0];
-					asteroids[i][5] = Math.random(.5) - .25;
-				}	
+					
+					//set starting position, speed, and velocity vector
+					var seed = 2*Math.PI*Math.random()-1;
+					asteroids[i][2].position.set ((sun.position.x + asteroids[i][4]) * Math.sin(seed), 
+					                              (sun.position.y + asteroids[i][4]) * Math.cos(seed),
+					                               sun.position.z);
+					asteroids[i][5] = Math.sqrt(asteroids[i][4]);                  
+                    asteroids[i][6] = [-asteroids[i][5] * Math.sin(seed), asteroids[i][5] * Math.cos(seed), 0];
+				}
+				
+				function updatePositionVectors(a) {
+					asteroids[a][2].position.x += asteroids[a][6][0] * dt;
+					asteroids[a][2].position.y += asteroids[a][6][1] * dt;
+					asteroids[a][2].position.z += asteroids[a][6][2] * dt;
+				}
+				
+				function updateVelocityVectors(a) {
+					asteroids[a][6][0] += asteroids[a][7][0] * dt;
+					asteroids[a][6][1] += asteroids[a][7][1] * dt;
+					asteroids[a][6][2] += asteroids[a][7][2] * dt;
+				}
+				
+				function updateAccelerationVectors(a) {
+					let ax = 0;
+					let ay = 0;
+					let az = 0;
+
+					const dx = -asteroids[a][2].position.x;
+					const dy = -asteroids[a][2].position.y;
+					const dz = -asteroids[a][2].position.z;
+
+					const distSq = dx * dx + dy * dy + dz * dz;
+
+					const f = (g * sun_mass) /
+					          (distSq * Math.sqrt(distSq + softeningConstant));
+
+					ax += dx * f;
+					ay += dy * f;
+					az += dz * f;
+
+					asteroids[a][7][0] = ax;
+					asteroids[a][7][1] = ay;
+					asteroids[a][7][2] = az;
+				}
 
 				//collisions
 				function checkCollision(i, j) {
@@ -139,14 +177,19 @@
 				function orbit() {
 				    
 					for (i=0; i<num_asteroids; i++) {
-						//update the vector (using sin and cosine) to keep orbit stable
- 						//a = a + asteroids[i][5] * delta;
-                                                //planetX = Math.cos(a) * orbitRadius + parentStar.getX();
-                                                //planetY = Math.sin(a) * orbitRadius + parentStar.getY();												               
-
-						asteroids[i][2].position.x += asteroids[i][6][0] * asteroids[i][5];
-						asteroids[i][2].position.y += asteroids[i][6][1] * asteroids[i][5];
-						asteroids[i][2].position.z += asteroids[i][6][2] * asteroids[i][5];
+						updateAccelerationVectors(i);
+						updateVelocityVectors(i);
+						updatePositionVectors(i);
+					    
+					    /*
+					    //update the vector (using sin and cosine) to keep orbit stable
+ 						a = 2*Math.PI*((sun_rotate_time % asteroids[i][5])/asteroids[i][5])-1;
+                        asteroids[i][2].position.x = Math.cos(a) * asteroids[i][4] + sun.position.x;
+                        asteroids[i][2].position.z = Math.sin(a) * asteroids[i][4] + sun.position.z;
+						if(i==1) {
+							console.log(Math.cos(a));
+						}
+						*/
 					}
 					for (i=0; i<num_asteroids; i++) {
 						for (j=0; j<i; j++) {
@@ -157,7 +200,7 @@
 					}
 					
 				}	
-				setInterval(orbit, 10);	
+				setInterval(orbit, 1);	
 
 				//planet generation
 				function Pgen() {
