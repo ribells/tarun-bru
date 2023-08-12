@@ -139,7 +139,11 @@
 				function orbit() {
 				    
 					for (i=0; i<num_asteroids; i++) {
-					    //update the vector (using sin and cosine) to keep orbit stable
+						//update the vector (using sin and cosine) to keep orbit stable
+ 						//a = a + asteroids[i][5] * delta;
+                                                //planetX = Math.cos(a) * orbitRadius + parentStar.getX();
+                                                //planetY = Math.sin(a) * orbitRadius + parentStar.getY();												               
+
 						asteroids[i][2].position.x += asteroids[i][6][0] * asteroids[i][5];
 						asteroids[i][2].position.y += asteroids[i][6][1] * asteroids[i][5];
 						asteroids[i][2].position.z += asteroids[i][6][2] * asteroids[i][5];
