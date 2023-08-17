@@ -43,10 +43,10 @@
 		var camera = "";
 		var sun = "";
 		var goal = "";
-		const g = 9.5;
-		const dt = 0.08; // 0.008 years is equal to 2.92 days
+		const g = 39;
+		const dt = 0.008; // 0.008 years is equal to 2.92 days
 		const softeningConstant = 0.15;
-		const sun_mass = 1;
+		const sun_mass = 100;
 	
 		// MAIN
 		function main() {
@@ -83,7 +83,7 @@
 					return Math.sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2));
 				}
 
-				//sun()
+				// SUN
 				var geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
 				var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } ); 
 				sun = new THREE.Mesh( geometry, material ); 
@@ -100,12 +100,12 @@
 
 			function Creations()
 			{
-				//asteroid generation
-				for (n=0; n<100; n++){
-					asteroids.push([0, Math.floor(Math.random() * 1) + 0.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, 0, [0,0,0], [0,0,0]]);
+				//ASTEROIDS generation
+				for (n=0; n<100; n++) {
+					asteroids.push([0, Math.random()+.25, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, 0, [0,0,0], [0,0,0]]);
 				}
 
-				//asteroid assignment
+				//ASTEROIDS assignment
 				num_asteroids = asteroids.length;
 				for(i=0; i<num_asteroids; i++) {
 					geometry = new THREE.SphereGeometry(5, 6, 10); 
@@ -120,8 +120,11 @@
 					                              (sun.position.y + asteroids[i][4]) * Math.cos(seed),
 					                               sun.position.z);
 					//Stable Orbit Formula: Math.sqrt(2*g*sun_mass/r);					
-					asteroids[i][5] = Math.sqrt(2*g*sun_mass/asteroids[i][4]);
-					asteroids[i][6] = [-asteroids[i][5] * Math.sin(seed), asteroids[i][5] * Math.cos(seed), 0];
+					asteroids[i][5] = Math.sqrt(g*sun_mass/asteroids[i][4]);
+					asteroids[i][6] = [asteroids[i][5] * Math.cos(seed), -asteroids[i][5] * Math.sin(seed), 0];
+					/*if(i%7==1) {
+						asteroids[i][6] = [0,0,0];
+					}*/
 				}
 				
 				function updatePositionVectors(a) {
@@ -186,6 +189,9 @@
 						for (j=0; j<i; j++) {
 							if (checkCollision(i, j)) {
 								//alert("collision of asteroids " + i + " and " + j);
+								temp = asteroids[i][6];
+								asteroids[i][6] = asteroids[j][6];
+								asteroids[j][6] = temp;
 							}
 						}
 					}
