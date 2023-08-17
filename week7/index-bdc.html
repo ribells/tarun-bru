@@ -43,11 +43,10 @@
 		var camera = "";
 		var sun = "";
 		var goal = "";
-		const g = 39.5;
-        const dt = 0.008; // 0.008 years is equal to 2.92 days
-        const softeningConstant = 0.15;
-        const sun_mass = 100;
-        const a_mass = 1.65956463e-7;
+		const g = 9.5;
+		const dt = 0.08; // 0.008 years is equal to 2.92 days
+		const softeningConstant = 0.15;
+		const sun_mass = 1;
 	
 		// MAIN
 		function main() {
@@ -120,8 +119,9 @@
 					asteroids[i][2].position.set ((sun.position.x + asteroids[i][4]) * Math.sin(seed), 
 					                              (sun.position.y + asteroids[i][4]) * Math.cos(seed),
 					                               sun.position.z);
-					asteroids[i][5] = Math.sqrt(asteroids[i][4]);                  
-                    asteroids[i][6] = [-asteroids[i][5] * Math.sin(seed), asteroids[i][5] * Math.cos(seed), 0];
+					//Stable Orbit Formula: Math.sqrt(2*g*sun_mass/r);					
+					asteroids[i][5] = Math.sqrt(2*g*sun_mass/asteroids[i][4]);
+					asteroids[i][6] = [-asteroids[i][5] * Math.sin(seed), asteroids[i][5] * Math.cos(seed), 0];
 				}
 				
 				function updatePositionVectors(a) {
@@ -180,16 +180,7 @@
 						updateAccelerationVectors(i);
 						updateVelocityVectors(i);
 						updatePositionVectors(i);
-					    
-					    /*
-					    //update the vector (using sin and cosine) to keep orbit stable
- 						a = 2*Math.PI*((sun_rotate_time % asteroids[i][5])/asteroids[i][5])-1;
-                        asteroids[i][2].position.x = Math.cos(a) * asteroids[i][4] + sun.position.x;
-                        asteroids[i][2].position.z = Math.sin(a) * asteroids[i][4] + sun.position.z;
-						if(i==1) {
-							console.log(Math.cos(a));
-						}
-						*/
+
 					}
 					for (i=0; i<num_asteroids; i++) {
 						for (j=0; j<i; j++) {
@@ -288,3 +279,5 @@
 	</script>
 </body>
 </html>
+
+
