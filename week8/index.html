@@ -38,15 +38,29 @@
 	<div id="ThreeJS" style="position: absolute; left:px; top:0px"></div>
 
 	<script>
+		class Asteroid {
+		    constructor(model, color) {
+            this.skew = Math.floor(Math.random()*3)-1.5;
+			this.scale = (Math.random()*0.75)+0.375;
+			this.model = model;
+			this.color = color;
+			this.distance = (Math.random()*250)+100;
+			this.velocity = 0;
+			this.vector = [0,0,0];
+			this.acceleration = [0,0,0];
+		  }
+		}
+
 		//variables to be controlled from external to main
 		var viewDistance = 800;
 		var camera = "";
+		var coss = "";
 		var sun = "";
 		var goal = "";
-		const g = 3900;
-		const dt = 0.008; // 0.008 years is equal to 2.92 days
+		const g = 39000;
+		const dt = 0.004; // 0.008 years is equal to 2.92 days
 		const softeningConstant = 0.15;
-		const sun_mass = 100;
+		const sun_mass = 1000;
 	
 		// MAIN
 		function main() {
@@ -67,6 +81,7 @@
 			var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
 			var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
 			var asteroids = [/* x-rot, scale, model, color, distance, velocity, vector */];
+			var num_asteroids = 100;
 			var planets = [/* x-rot, scale, model, color, distance, speed, x position relative to the sun, y position relative to the sun, z position relative to the sun*/];
 			var min_dst = 10000000;
 
@@ -79,20 +94,33 @@
 				// CAMERA
 				camera = new THREE.PerspectiveCamera( VIEW_ANGLE, window.innerWidth / window.innerHeight, NEAR, FAR);
 				camera.position.set(0, 0, 1000);
+                camera.position.setZ(200)
+                camera.position.setY(1000)
+                camera.updateProjectionMatrix();
 
 				// SCENE
 				scene = new THREE.Scene();
 				camera.lookAt( scene.position );
+				
+				// CENTER OF SOLAR SYSTEM
+				/*var geometry = new THREE.SphereGeometry(5, 6, 10); 
+				var material = new THREE.MeshStandardMaterial( { color: "blue" } );
+				coss = new THREE.Mesh( geometry, material );  
+				coss.scale.set (1, 1, 1);
+				scene.add(coss);*/
 
 				// SUN
-				var geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
-				var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } ); 
-				sun = new THREE.Mesh( geometry, material ); 
-				sun.scale.set (1, 1, 1);
+				const sunTexture = new THREE.TextureLoader().load("img/sun.png");
+				geometry = new THREE.SphereGeometry( 15, 32, 40 ); 
+				material = new THREE.MeshBasicMaterial( { color: "white", map: sunTexture }); 
+				sun = new THREE.Mesh( geometry, material );  
+				sun.scale.set (1.1, 1.1, 1.1);
 				goal = new THREE.Object3D;
 				sun.add(goal);
 				scene.add(sun);
-				goal.position.set(0, 10, 265);
+				goal.position.set(0, 0, 1000);
+                goal.position.setZ(200)
+                goal.position.setY(965)
 				const color = 0xFFFFFF;
 				const light = new THREE.PointLight(color, 1, 2000);
 				sun.add(light);
@@ -102,51 +130,53 @@
 			function Creations()
 			{
 				//ASTEROIDS generation
-				for (n=0; n<100; n++) {
-                    //				x-rot, 							   scale, 				   model,              color,    						                                distance, 						  speed        velocity	acceleration
-					asteroids.push([Math.floor(Math.random()*0.5)-0.5, (Math.random()*1)+0.5, "",                 '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), Math.floor(Math.random()*250)+50, 0,           [0,0,0], [0,0,0]]);
-				}
-
-				//ASTEROIDS assignment
-				num_asteroids = asteroids.length;
-				for(i=0; i<num_asteroids; i++) {
-					geometry = new THREE.SphereGeometry(5, 6, 10); 
-					material = new THREE.MeshStandardMaterial( { color: asteroids[i][3] } ); 
-					asteroids[i][2] = new THREE.Mesh( geometry, material ); 
-					sun.add( asteroids[i][2] );
-					asteroids[i][2].scale.set (asteroids[i][1],asteroids[i][1],asteroids[i][1]);
+				for (n=0; n<num_asteroids; n++) {
+					geometry = new THREE.SphereGeometry(5, 6, 10);
+					color = "#"+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6);
+					material = new THREE.MeshStandardMaterial( { color: color } ); 
+					ast_model = new THREE.Mesh( geometry, material );
+					ast = new Asteroid(ast_model, color);
+					ast.model.scale.set (ast.scale, ast.scale, ast.scale);
 					
 					//set starting position, speed, and velocity vector
 					var seed = 2*Math.PI*Math.random()-1;
-					asteroids[i][2].position.set ((sun.position.x + asteroids[i][4]) * Math.sin(seed), 
-					                              (sun.position.y + asteroids[i][4]) * Math.cos(seed),
-					                               sun.position.z);
+					ast.model.position.set ((sun.position.x + ast.distance) * Math.sin(seed), 
+					                    	(sun.position.y + ast.distance) * Math.cos(seed) * ((2*Math.PI-ast.skew)/(2*Math.PI)),
+					                    	(sun.position.z + ast.distance) * Math.cos(seed) * (ast.skew/(2*Math.PI)));
+
 					//Stable Orbit Formula: Math.sqrt(2*g*sun_mass/r);					
-					asteroids[i][5] = Math.sqrt(g*sun_mass/asteroids[i][4]);
-					asteroids[i][6] = [asteroids[i][5] * Math.cos(seed), -asteroids[i][5] * Math.sin(seed), 0];
+					ast.velocity = Math.sqrt(g*sun_mass/ast.distance);
+					ast.vector = [ast.velocity * Math.cos(seed), 
+					                  ast.velocity * Math.sin(seed * ((ast.skew-2*Math.PI)/(2*Math.PI))),
+					                  ast.velocity * Math.sin(seed * (ast.skew/(2*Math.PI)))];
+
+				    sun.add(ast.model)
+  
+                    
+
+					asteroids.push(ast);				
 				}
 				
 				function updatePositionVectors(a) {
-					asteroids[a][2].position.x += asteroids[a][6][0] * dt;
-					asteroids[a][2].position.y += asteroids[a][6][1] * dt;
-					asteroids[a][2].position.z += asteroids[a][6][2] * dt;
-					dst = distance(asteroids[a][2].position.x, sun.position.x, 
-						asteroids[a][2].position.y, sun.position.y,
-						asteroids[a][2].position.z, sun.position.z);
+					asteroids[a].model.position.x = asteroids[a].model.position.x + asteroids[a].vector[0] * dt;
+					asteroids[a].model.position.y = asteroids[a].model.position.y + asteroids[a].vector[1] * dt;
+					asteroids[a].model.position.z = asteroids[a].model.position.z + asteroids[a].vector[2] * dt;
+					dst = distance(asteroids[a].model.position.x, sun.position.x, 
+						           asteroids[a].model.position.y, sun.position.y,
+						           asteroids[a].model.position.z, sun.position.z);
 
-					if (dst < 8) {
-						//alert('sun eat');
+					if (dst < 10) {
 						//delete the asteroids (or other choice) here
-						asteroids[a][2].position.x = 100000000;
-						asteroids[a][2].position.y = 100000000;
-						asteroids[a][2].position.z = 100000000;					
+						asteroids[a].model.position.x = 100000000;
+						asteroids[a].model.position.y = 100000000;
+						asteroids[a].model.position.z = 100000000;					
 					}
 				}
 				
 				function updateVelocityVectors(a) {
-					asteroids[a][6][0] += asteroids[a][7][0] * dt;
-					asteroids[a][6][1] += asteroids[a][7][1] * dt;
-					asteroids[a][6][2] += asteroids[a][7][2] * dt;
+					asteroids[a].vector[0] += asteroids[a].acceleration[0] * dt;
+					asteroids[a].vector[1] += asteroids[a].acceleration[1] * dt;
+					asteroids[a].vector[2] += asteroids[a].acceleration[2] * dt;
 				}
 				
 				function updateAccelerationVectors(a) {
@@ -154,9 +184,9 @@
 					let ay = 0;
 					let az = 0;
 
-					const dx = -asteroids[a][2].position.x;
-					const dy = -asteroids[a][2].position.y;
-					const dz = -asteroids[a][2].position.z;
+					const dx = -asteroids[a].model.position.x;
+					const dy = -asteroids[a].model.position.y;
+					const dz = -asteroids[a].model.position.z;
 
 					const distSq = dx * dx + dy * dy + dz * dz;
 
@@ -167,19 +197,19 @@
 					ay += dy * f;
 					az += dz * f;
 
-					asteroids[a][7][0] = ax;
-					asteroids[a][7][1] = ay;
-					asteroids[a][7][2] = az;
+					asteroids[a].acceleration[0] = ax;
+					asteroids[a].acceleration[1] = ay;
+					asteroids[a].acceleration[2] = az;
 				}
 
 				function checkCollision(i, j) {
-                        const distance = Math.sqrt((asteroids[i][2].position.x - asteroids[j][2].position.x) * 
-                                                (asteroids[i][2].position.x - asteroids[j][2].position.x) + 
-                                                (asteroids[i][2].position.y - asteroids[j][2].position.y) * 
-                                                (asteroids[i][2].position.y - asteroids[j][2].position.y) +
-                                                (asteroids[i][2].position.z - asteroids[j][2].position.z) * 
-                                                (asteroids[i][2].position.z - asteroids[j][2].position.z));
-                        if (distance/4.8 < (asteroids[i][1]) + (asteroids[j][1])) {
+                        const distance = Math.sqrt((asteroids[i].model.position.x - asteroids[j].model.position.x) * 
+                                                (asteroids[i].model.position.x - asteroids[j].model.position.x) + 
+                                                (asteroids[i].model.position.y - asteroids[j].model.position.y) * 
+                                                (asteroids[i].model.position.y - asteroids[j].model.position.y) +
+                                                (asteroids[i].model.position.z - asteroids[j].model.position.z) * 
+                                                (asteroids[i].model.position.z - asteroids[j].model.position.z));
+                        if (distance/4.8 < (asteroids[i].scale) + (asteroids[j].scale)) {
                             return true;
                         }
                 }
@@ -199,29 +229,28 @@
                     for (i=0; i<num_asteroids; i++) {
                         for (j=0; j<i; j++) {
                             if (checkCollision(i, j) == true) {
-                                ast = asteroids[j][6][0];
-                                ast1 = asteroids[j][6][1];
-                                ast2 = asteroids[j][6][2];
-                                ast3 = asteroids[i][6][0];
-                                ast4 = asteroids[i][6][1];
-                                ast5 = asteroids[i][6][2];
-                                asteroids[i][6][0] = (ast * .99);
-                                asteroids[i][6][1] = (ast1 * .99);
-                                asteroids[i][6][2] = (ast2 * .99);
-                                asteroids[j][6][0] = (ast3 * .99);
-                                asteroids[j][6][1] = (ast4 * .99);
-                                asteroids[j][6][2] = (ast5 * .99);
+                                ast = asteroids[j].vector[0];
+                                ast1 = asteroids[j].vector[1];
+                                ast2 = asteroids[j].vector[2];
+                                ast3 = asteroids[i].vector[0];
+                                ast4 = asteroids[i].vector[1];
+                                ast5 = asteroids[i].vector[2];
+                                asteroids[i].vector[0] = (ast * .99);
+                                asteroids[i].vector[1] = (ast1 * .99);
+                                asteroids[i].vector[2] = (ast2 * .99);
+                                asteroids[j].vector[0] = (ast3 * .99);
+                                asteroids[j].vector[1] = (ast4 * .99);
+                                asteroids[j].vector[2] = (ast5 * .99);
                             }
                         }
-                    }
-                        
+                    }                 
                 }	
-                setInterval(orbit, 10);	
-                
+                setInterval(orbit, 10);
+
 				//planet generation
 				function Pgen() {
 					for (i=0; i<10; i++){
-						planets.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 2) + 0.5, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), 500, Math.floor(Math.random()*1300)+20, Math.floor(Math.random()*1000)-500, Math.floor(Math.random()*1000)-500, Math.floor(Math.random()*1000)-500])
+						planets.push([Math.floor(Math.random()*0.5)-0.5, Math.floor(Math.random() * 2) + 1, "", '#'+(0x1000000+Math.random()*0xffffff).toString(16).substr(1,6), 500, Math.floor(Math.random()*1300)+20, Math.floor(Math.random()*5000)-2500, Math.floor(Math.random()*5000)-2500, Math.floor(Math.random()*5000)-2500])
 					}
 				}
 				Pgen();
@@ -245,7 +274,8 @@
 			// CONTROLS
 			controls = new THREE.TrackballControls( camera );
 			controls.rotateSpeed = 1;
-			controls.noPan = false;
+		    controls.noPan = false;
+
 		
 			// RENDERER
 			if ( Detector.webgl ) {
@@ -271,10 +301,11 @@
 			function handleKeyboard() {
 				//sun movement
 				if ( keyboard.pressed("f") ) {
-					sun.translateZ(65);
+					sun.translateY(65);
 					temp.setFromMatrixPosition(goal.matrixWorld);
 					camera.position.lerp(temp, 1);
 					camera.lookAt( sun.position );
+                    controls.target.set(sun.position.x, sun.position.y, sun.position.z);
 				}
 			}
 
